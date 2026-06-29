@@ -2,6 +2,7 @@ import datetime
 
 import boto3
 
+from botocore.exceptions import ClientError
 
 class DataBase:
     def __init__(self, table_name, region):

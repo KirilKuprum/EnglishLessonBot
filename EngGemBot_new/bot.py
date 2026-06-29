@@ -60,10 +60,49 @@ async def cmd_start(message: Message):
 
 
 async def send_reminder(bot: Bot, chat_id: int, cards: list):
-    await bot.send_message(chat_id, "Час перевірити знання! Ось ваші картки:")
-    for card in cards:
-        await bot.send_message(chat_id, f"Як перекласти: {card['question']}?")
+    test_db.table.update_item(
+        Key={'user_id': str(chat_id)},
+        UpdateExpression="SET #s = :val",
+        ExpressionAttributeNames={'#s': 'status'},
+        ExpressionAttributeValues={':val': 'active'}
+    )
+    
+    await bot.send_message(chat_id, "Час перевірити знання! Напиши переклад для слова:")
 
+    first_card = cards[0]
+    await bot.send_message(chat_id, f"Слово: {first_card['question']}")
+
+@dp.message()
+async def process_answer(message: Message):
+    user_data = test_db.get_item(message.chat.id)
+    
+    if user_data and user_data.get('status') == 'active':
+        cards = user_data['current_cards']
+        idx = user_data.get('current_index', 0)
+        correct_answer = cards[0]['answer'].lower().strip()
+        user_answer = message.text.lower().strip()
+
+        if user_answer == correct_answer:
+            await message.answer("Допустим")
+            test_db.update_stats(message.chat.id, True)
+        else:
+            await message.answer(f"Отказано. Вот: {correct_answer}")
+            test_db.update_stats(message.chat.id, False)
+            
+       next_idx = idx + 1
+        if next_idx < len(cards):
+            test_db.update_index(message.chat.id, next_idx)
+            await message.answer(f"Наступне слово: {cards[next_idx]['question']}")
+        else:
+            await message.answer("Тест завершено! Ви пройшли всі 5 слів.")
+            test_db.table.update_item(
+                Key={'user_id': str(message.chat.id)},
+                UpdateExpression="SET #s = :val",
+                ExpressionAttributeNames={'#s': 'status'},
+                ExpressionAttributeValues={':val': 'finished'}
+            )
+    else:
+        await message.answer("Натисніть /encard, щоб почати тест.")
 
 @dp.message(Command("encard"))
 async def cmd_encard(message: Message):
@@ -82,6 +121,14 @@ async def cmd_encard(message: Message):
         text = response.text.replace("```json", "").replace("```", "").strip()
         cards = json.loads(text)
         
+        db_item = {
+            'user_id': str(message.chat.id),
+            'current_cards': cards,
+            'status': 'pending',
+            'current_index': 0
+        }
+        test_db.put_item(db_item)
+
         run_date = datetime.now() + timedelta(seconds=10)
         scheduler.add_job(
             send_reminder, 

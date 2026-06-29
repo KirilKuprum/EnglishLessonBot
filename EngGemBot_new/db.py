@@ -27,3 +27,10 @@ class DataBase:
         except ClientError as e:
             print(f"Помилка отримання даних з DynamoDB: {e.response['Error']['Message']}")
             return None
+        
+    def update_index(self, user_id, index):
+        self.table.update_item(
+            Key={'user_id': str(user_id)},
+            UpdateExpression="SET current_index = :val",
+            ExpressionAttributeValues={':val': index}
+        )

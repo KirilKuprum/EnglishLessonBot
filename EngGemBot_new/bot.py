@@ -69,7 +69,8 @@ async def cmd_encard(message: Message):
             model="gemini-1.5-flash",
             contents=prompt
         )
-        text = response.text.replace("```json", "").replace("```", "").strip()
+        match = re.search(r'\[.*\]', response.text, re.DOTALL)
+        text = match.group(0) if match else response.text
         cards = json.loads(text)
         
         db_item = {

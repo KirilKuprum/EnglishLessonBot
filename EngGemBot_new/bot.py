@@ -65,12 +65,10 @@ async def cmd_encard(message: Message):
 
     try:
         prompt = PromptBuilder.simplePrompt()
-        response = await asyncio.to_thread(
-            client.models.generate_content,
+        response = client.models.generate_content(
             model="gemini-1.5-flash",
             contents=prompt
         )
-        
         text = response.text.replace("```json", "").replace("```", "").strip()
         cards = json.loads(text)
         

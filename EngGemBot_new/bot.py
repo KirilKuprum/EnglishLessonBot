@@ -66,7 +66,7 @@ async def cmd_encard(message: Message):
     try:
         prompt = PromptBuilder.simplePrompt()
         response = client.models.generate_content(
-            model="gemini-pro",
+            model="gemini-2.0-flash",
             contents=prompt
         )
         match = re.search(r'\[.*\]', response.text, re.DOTALL)

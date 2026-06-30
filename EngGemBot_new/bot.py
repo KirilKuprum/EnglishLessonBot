@@ -23,7 +23,6 @@ import re
 
 
 scheduler = AsyncIOScheduler()
-scheduler.start()
 
 dp = Dispatcher()
 client = None
@@ -151,6 +150,8 @@ async def main():
     client = auth_gemini_api()
     test_db = auth_db()
 
+    scheduler.start()
+    
     print("Starting bot...")
     await dp.start_polling(bot)
 

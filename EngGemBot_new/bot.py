@@ -67,7 +67,7 @@ async def cmd_encard(message: Message):
         await asyncio.sleep(15)
         prompt = PromptBuilder.simplePrompt()
         response = client.models.generate_content(
-            model="gemini-2.0-flash",
+            model="gemini-2.5-flash-lite",
             contents=prompt
         )
         match = re.search(r'\[.*\]', response.text, re.DOTALL)

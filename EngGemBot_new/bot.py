@@ -58,52 +58,6 @@ def auth_gemini_api():
 async def cmd_start(message: Message):
     await message.answer("Іефке")
 
-
-async def send_reminder(bot: Bot, chat_id: int, cards: list):
-    test_db.table.update_item(
-        Key={'user_id': str(chat_id)},
-        UpdateExpression="SET #s = :val",
-        ExpressionAttributeNames={'#s': 'status'},
-        ExpressionAttributeValues={':val': 'active'}
-    )
-    
-    await bot.send_message(chat_id, "Час перевірити знання! Напиши переклад для слова:")
-
-    first_card = cards[0]
-    await bot.send_message(chat_id, f"Слово: {first_card['question']}")
-
-@dp.message()
-async def process_answer(message: Message):
-    user_data = test_db.get_item(message.chat.id)
-    
-    if user_data and user_data.get('status') == 'active':
-        cards = user_data['current_cards']
-        idx = user_data.get('current_index', 0)
-        correct_answer = cards[0]['answer'].lower().strip()
-        user_answer = message.text.lower().strip()
-
-        if user_answer == correct_answer:
-            await message.answer("Допустим")
-            test_db.update_stats(message.chat.id, True)
-        else:
-            await message.answer(f"Отказано. Вот: {correct_answer}")
-            test_db.update_stats(message.chat.id, False)
-            
-       next_idx = idx + 1
-        if next_idx < len(cards):
-            test_db.update_index(message.chat.id, next_idx)
-            await message.answer(f"Наступне слово: {cards[next_idx]['question']}")
-        else:
-            await message.answer("Тест завершено! Ви пройшли всі 5 слів.")
-            test_db.table.update_item(
-                Key={'user_id': str(message.chat.id)},
-                UpdateExpression="SET #s = :val",
-                ExpressionAttributeNames={'#s': 'status'},
-                ExpressionAttributeValues={':val': 'finished'}
-            )
-    else:
-        await message.answer("Натисніть /encard, щоб почати тест.")
-
 @dp.message(Command("encard"))
 async def cmd_encard(message: Message):
     if client is None:
@@ -134,7 +88,7 @@ async def cmd_encard(message: Message):
             send_reminder, 
             'date', 
             run_date=run_date, 
-            args=[bot, message.chat.id, cards]
+            args=[message.chat.id, cards]
         )
         
         await message.answer("Через годину готуйся...")
@@ -142,6 +96,51 @@ async def cmd_encard(message: Message):
     except Exception as err:
         print(f"Помилка: {err}")
         await message.answer("Сталася помилка при генерації карток.")
+
+
+async def send_reminder(chat_id: int, cards: list):
+
+    test_db.update_status(chat_id, 'active')
+    
+    await bot.send_message(chat_id, "Переклад:")
+    if cards and len(cards) > 0:
+        first_card = cards[0]
+        await bot.send_message(chat_id, f"Слово: {first_card['question']}")
+
+@dp.message()
+async def process_answer(message: Message):
+    user_data = test_db.get_item(message.chat.id)
+    
+    if user_data and user_data.get('status') == 'active':
+        cards = user_data['current_cards']
+        idx = user_data.get('current_index', 0)
+
+        if idx >= len(cards):
+            await message.answer("Тест вже завершено.")
+            test_db.update_status(message.chat.id, 'finished')
+            return
+
+        correct_answer = cards[idx]['answer'].lower().strip()
+        user_answer = message.text.lower().strip()
+
+        if user_answer == correct_answer:
+            await message.answer("Допустим")
+            test_db.update_stats(message.chat.id, True)
+        else:
+            await message.answer(f"Отказано. Вот: {correct_answer}")
+            test_db.update_stats(message.chat.id, False)
+            
+        next_idx = idx + 1
+        if next_idx < len(cards):
+            test_db.update_index(message.chat.id, next_idx)
+            await message.answer(f"Наступне слово: {cards[next_idx]['question']}")
+        else:
+            await message.answer("Тест завершено! Ви пройшли всі 5 слів.")
+
+            test_db.update_status(message.chat.id, 'finished')
+    else:
+        await message.answer("Натисніть /encard, щоб почати тест.")
+
 
 
 async def main():

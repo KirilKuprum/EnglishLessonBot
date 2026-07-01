@@ -104,7 +104,7 @@ async def cmd_encard(message: Message):
         msg_cards = await message.answer(words_text)
         msg_prepare = await message.answer("Через годину готуйся...")
         
-        run_date = datetime.now() + timedelta(seconds=10)
+        run_date = datetime.now() + timedelta(seconds=5)
         
         scheduler.add_job(
             send_reminder, 

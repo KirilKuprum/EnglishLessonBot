@@ -52,7 +52,7 @@ class DataBase:
     def get_item(self, user_id):
         conn = psycopg2.connect(self.conn_params)
         cur = conn.cursor()
-        cur.execute("SELECT user_id, current_cards, current_index, status FROM users WHERE user_id = %s", (str(user_id),))
+        cur.execute("SELECT user_id, current_cards, current_index, status, stats_correct, stats_wrong FROM users WHERE user_id = %s", (str(user_id),))
         row = cur.fetchone()
         cur.close()
         conn.close()
@@ -62,7 +62,9 @@ class DataBase:
                 'user_id': row[0],
                 'current_cards': json.loads(row[1]) if row[1] else [],
                 'current_index': row[2],
-                'status': row[3]
+                'status': row[3],
+                'stats_correct': row[4],  
+                'stats_wrong': row[5]
             }
         return None
 

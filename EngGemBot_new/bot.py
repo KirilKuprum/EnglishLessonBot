@@ -55,7 +55,18 @@ def auth_gemini_api():
 
 @dp.message(Command("start"))
 async def cmd_start(message: Message):
-    await message.answer("Іефке")
+    await message.answer(
+        f"/encard-почати гру\n\n"
+        f"/stats-статистика гри"
+    )
+
+async def delete_cards_msg(bot_instance, chat_id, msg_ids):
+    for msg_id in msg_ids:
+        try:
+            await bot_instance.delete_message(chat_id=chat_id, message_id=msg_id)
+        except Exception as e:
+            print(f"Не вдалося видалити повідомлення {msg_id}: {e}")
+
 
 @dp.message(Command("encard"))
 async def cmd_encard(message: Message):
@@ -87,15 +98,23 @@ async def cmd_encard(message: Message):
             a = card.get('answer') or card.get('translation') or "Привіт"
             words_text += f"{i}. {q} — {a}\n"
 
-        await message.answer(words_text)
-        await message.answer("Через годину готуйся...")
+        msg_cards = await message.answer(words_text)
+        msg_prepare = await message.answer("Через годину готуйся...")
         
         run_date = datetime.now() + timedelta(seconds=10)
+        
         scheduler.add_job(
             send_reminder, 
             'date', 
             run_date=run_date, 
             args=[message.chat.id, cards]
+        )
+        
+        scheduler.add_job(
+            delete_cards_msg,
+            'date',
+            run_date=run_date,
+            args=[bot, message.chat.id, [msg_cards.message_id, msg_prepare.message_id]]
         )
         
         
@@ -151,13 +170,41 @@ async def process_answer(message: Message):
             next_question = next_card.get('question') or next_card.get('word') or "Next word"
             await message.answer(f"Наступне слово ({next_idx + 1}/{len(cards)}):\n **{next_question}**")
         else:
-            await message.answer("Тест завершено! Ви пройшли всі 5 слів.")
-
             test_db.update_status(message.chat.id, 'finished')
+
+            updated_data = test_db.get_item(message.chat.id) or {}
+            correct = updated_data.get('correct_answers') or updated_data.get('correct') or 0
+            incorrect = updated_data.get('incorrect_answers') or updated_data.get('incorrect') or 0
+            
+            await message.answer(
+                f"Тест завершено! Ви пройшли всі {len(cards)} слів.\n\n"
+                f"Ваш результат:\n"
+                f"Коррект ансверс: {correct}\n"
+                f"Інкоррект ансверс: {incorrect}"
+            )
     else:
         await message.answer("Натисніть /encard, щоб почати тест.")
 
+@dp.message(Command("stats"))
+async def cmd_stats(message: Message):
+    user_data = test_db.get_item(message.chat.id)
+    
+    if not user_data:
+        await message.answer("У вас ще немає збереженої статистики. Пройдіть хоча б один тест за допомогою /encard.")
+        return
+        
+    correct = user_data.get('correct_answers') or user_data.get('correct') or 0
+    incorrect = user_data.get('incorrect_answers') or user_data.get('incorrect') or 0
+    total = correct + incorrect
+    
+    success_rate = int((correct / total) * 100) if total > 0 else 0
 
+    await message.answer(
+        f"Ваша загальна статистика:\n\n"
+        f"Правильних відповідей: {correct}\n"
+        f"Неправильних відповідей: {incorrect}\n"
+        f"Загальна точність: {success_rate}%"
+    )
 
 async def main():
     global bot, client, test_db

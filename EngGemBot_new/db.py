@@ -107,7 +107,18 @@ class DataBase:
         cur.close() 
         conn.close()
         
-   def add_to_history(self, user_id, correct, wrong, total):
+    def update_stats(self, user_id, is_correct: bool):
+        conn = psycopg2.connect(self.conn_params)
+        cur = conn.cursor()
+        if is_correct:
+            cur.execute("UPDATE users SET stats_correct = stats_correct + 1 WHERE user_id = %s", (str(user_id),))
+        else:
+            cur.execute("UPDATE users SET stats_wrong = stats_wrong + 1 WHERE user_id = %s", (str(user_id),))
+        conn.commit()
+        cur.close() 
+        conn.close()
+
+    def add_to_history(self, user_id, correct, wrong, total):
         conn = psycopg2.connect(self.conn_params)
         cur = conn.cursor()
         cur.execute(

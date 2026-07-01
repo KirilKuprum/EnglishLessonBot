@@ -175,9 +175,12 @@ async def process_answer(message: Message):
             updated_data = test_db.get_item(message.chat.id) or {}
             correct = updated_data.get('stats_correct') or 0
             incorrect = updated_data.get('stats_wrong') or 0
+            total_words = len(cards)
+
+            test_db.add_to_history(message.chat.id, correct, incorrect, total_words)
             
             await message.answer(
-                f"Тест завершено! Ви пройшли всі {len(cards)} слів.\n\n"
+                f"Тест завершено! Ви пройшли всі {total_words} слів.\n\n"
                 f"Ваш результат:\n"
                 f"Коррект ансверс: {correct}\n"
                 f"Інкоррект ансверс: {incorrect}"
@@ -187,24 +190,31 @@ async def process_answer(message: Message):
 
 @dp.message(Command("stats"))
 async def cmd_stats(message: Message):
-    user_data = test_db.get_item(message.chat.id)
+    history_rows = test_db.get_history(message.chat.id)
     
-    if not user_data:
-        await message.answer("У вас ще немає збереженої статистики. Пройдіть хоча б один тест за допомогою /encard.")
+    if not history_rows:
+        await message.answer("У вас ще немає збереженої історії. Пройдіть хоча б один тест за допомогою /encard.")
         return
         
-    correct = user_data.get('correct_answers') or user_data.get('correct') or 0
-    incorrect = user_data.get('incorrect_answers') or user_data.get('incorrect') or 0
-    total = correct + incorrect
+    response_text = "Історія наших тестів:\n\n"
     
-    success_rate = int((correct / total) * 100) if total > 0 else 0
+    for i, row in enumerate(history_rows, 1):
+        passed_at = row[0].strftime("%d.%m.%Y %H:%M") 
+        correct = row[1]
+        wrong = row[2]
+        total = row[3]
+        
+        response_text += (
+            f"Тест №{i} ({passed_at})\n"
+            f"Всього слів: {total}\n"
+            f"Правильно: {correct}  |  Неправильно: {wrong}\n"
+            f"----------------------------------\n"
+        )
+        if i >= 10:
+            response_text += "*Показано останні 10 тестів.*"
+            break
 
-    await message.answer(
-        f"Ваша загальна статистика:\n\n"
-        f"Правильних відповідей: {correct}\n"
-        f"Неправильних відповідей: {incorrect}\n"
-        f"Загальна точність: {success_rate}%"
-    )
+    await message.answer(response_text)
 
 async def main():
     global bot, client, test_db

@@ -98,13 +98,19 @@ async def cmd_encard(message: Message):
 
 
 async def send_reminder(chat_id: int, cards: list):
-
     test_db.update_status(chat_id, 'active')
     
-    await bot.send_message(chat_id, "Переклад:")
     if cards and len(cards) > 0:
         first_card = cards[0]
-        await bot.send_message(chat_id, f"Слово: {first_card['question']}")
+        
+        question = first_card.get('question') or first_card.get('word') or "Не знайдено"
+        answer = first_card.get('answer') or first_card.get('translation') or "Немає перекладу"
+        
+        await bot.send_message(chat_id, f"Слово для перекладу: **{question}**")
+        
+        print(f"DEBUG: Перша картка з бази: {first_card}")
+    else:
+        await bot.send_message(chat_id, "Помилка: масив карток порожній.")
 
 @dp.message()
 async def process_answer(message: Message):

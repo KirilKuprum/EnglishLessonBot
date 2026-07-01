@@ -9,6 +9,7 @@ from PromptBuilder import PromptBuilder
 from aiogram import Bot, Dispatcher
 from aiogram.types import Message
 from aiogram.filters import Command
+from aiogram import F
 
 from google import genai
 
@@ -140,7 +141,7 @@ async def send_reminder(chat_id: int, cards: list):
     else:
         await bot.send_message(chat_id, "Помилка: масив карток порожній.")
 
-@dp.message(~Command())
+@dp.message(F.text)
 async def process_answer(message: Message):
     user_data = test_db.get_item(message.chat.id)
     

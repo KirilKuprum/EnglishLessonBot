@@ -88,7 +88,9 @@ async def cmd_encard(message: Message):
             'user_id': str(message.chat.id),
             'current_cards': cards,
             'status': 'pending',
-            'current_index': 0
+            'current_index': 0,
+            'stats_correct': 0,
+            'stats_wrong': 0
         }
         test_db.put_item(db_item)
 

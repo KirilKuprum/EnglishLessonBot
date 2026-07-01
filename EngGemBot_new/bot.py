@@ -64,7 +64,6 @@ async def cmd_encard(message: Message):
         return
 
     try:
-        await asyncio.sleep(15)
         prompt = PromptBuilder.simplePrompt()
         response = client.models.generate_content(
             model="gemini-2.5-flash",
@@ -82,6 +81,15 @@ async def cmd_encard(message: Message):
         }
         test_db.put_item(db_item)
 
+        words_text = "**5:**\n\n"
+        for i, card in enumerate(cards, 1):
+            q = card.get('question') or card.get('word') or "Hello"
+            a = card.get('answer') or card.get('translation') or "Привіт"
+            words_text += f"{i}. **{q}** — {a}\n"
+
+        await message.answer(words_text)
+        await message.answer("Через годину готуйся...")
+        
         run_date = datetime.now() + timedelta(seconds=10)
         scheduler.add_job(
             send_reminder, 
@@ -90,7 +98,6 @@ async def cmd_encard(message: Message):
             args=[message.chat.id, cards]
         )
         
-        await message.answer("Через годину готуйся...")
         
     except Exception as err:
         print(f"Помилка: {err}")
@@ -125,7 +132,8 @@ async def process_answer(message: Message):
             test_db.update_status(message.chat.id, 'finished')
             return
 
-        correct_answer = cards[idx]['answer'].lower().strip()
+        current_card = cards[idx]
+        correct_answer = (current_card.get('answer') or current_card.get('translation') or "").lower().strip()
         user_answer = message.text.lower().strip()
 
         if user_answer == correct_answer:
@@ -138,7 +146,10 @@ async def process_answer(message: Message):
         next_idx = idx + 1
         if next_idx < len(cards):
             test_db.update_index(message.chat.id, next_idx)
-            await message.answer(f"Наступне слово: {cards[next_idx]['question']}")
+            
+            next_card = cards[next_idx]
+            next_question = next_card.get('question') or next_card.get('word') or "Next word"
+            await message.answer(f"Наступне слово ({next_idx + 1}/{len(cards)}):\n **{next_question}**")
         else:
             await message.answer("Тест завершено! Ви пройшли всі 5 слів.")
 

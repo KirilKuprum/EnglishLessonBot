@@ -48,13 +48,34 @@ class DataBase:
         
         cards_json = json.dumps(item.get('current_cards', []))
         cur.execute(
-            """INSERT INTO users (user_id, current_cards, current_index, status, created_at) 
-               VALUES (%s, %s, %s, %s, %s) 
-               ON CONFLICT (user_id) 
-               DO UPDATE SET current_cards = %s, current_index = %s, status = %s""",
+            """
+            INSERT INTO users (
+                user_id,
+                current_cards,
+                current_index,
+                status,
+                stats_correct,
+                stats_wrong,
+                created_at
+            )
+            VALUES (%s,%s,%s,%s,%s,%s,%s)
+            ON CONFLICT (user_id)
+            DO UPDATE SET
+                current_cards = EXCLUDED.current_cards,
+                current_index = EXCLUDED.current_index,
+                status = EXCLUDED.status,
+                stats_correct = EXCLUDED.stats_correct,
+                stats_wrong = EXCLUDED.stats_wrong,
+                created_at = EXCLUDED.created_at
+            """,
             (
-                str(item['user_id']), cards_json, item.get('current_index', 0), item.get('status', 'pending'), str(datetime.datetime.now()),
-                cards_json, item.get('current_index', 0), item.get('status', 'pending')
+                str(item['user_id']),
+                cards_json,
+                item.get('current_index', 0),
+                item.get('status', 'pending'),
+                item.get('stats_correct', 0),
+                item.get('stats_wrong', 0),
+                str(datetime.datetime.now())
             )
         )
         conn.commit()
@@ -96,17 +117,6 @@ class DataBase:
         cur.close() 
         conn.close()
 
-    def update_stats(self, user_id, is_correct: bool):
-        conn = psycopg2.connect(self.conn_params)
-        cur = conn.cursor()
-        if is_correct:
-            cur.execute("UPDATE users SET stats_correct = stats_correct + 1 WHERE user_id = %s", (str(user_id),))
-        else:
-            cur.execute("UPDATE users SET stats_wrong = stats_wrong + 1 WHERE user_id = %s", (str(user_id),))
-        conn.commit()
-        cur.close() 
-        conn.close()
-        
     def update_stats(self, user_id, is_correct: bool):
         conn = psycopg2.connect(self.conn_params)
         cur = conn.cursor()

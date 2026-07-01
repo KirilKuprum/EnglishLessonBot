@@ -140,7 +140,7 @@ async def send_reminder(chat_id: int, cards: list):
     else:
         await bot.send_message(chat_id, "Помилка: масив карток порожній.")
 
-@dp.message()
+@dp.message(~Command())
 async def process_answer(message: Message):
     user_data = test_db.get_item(message.chat.id)
     

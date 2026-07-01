@@ -173,8 +173,8 @@ async def process_answer(message: Message):
             test_db.update_status(message.chat.id, 'finished')
 
             updated_data = test_db.get_item(message.chat.id) or {}
-            correct = updated_data.get('correct_answers') or updated_data.get('correct') or 0
-            incorrect = updated_data.get('incorrect_answers') or updated_data.get('incorrect') or 0
+            correct = updated_data.get('stats_correct') or 0
+            incorrect = updated_data.get('stats_wrong') or 0
             
             await message.answer(
                 f"Тест завершено! Ви пройшли всі {len(cards)} слів.\n\n"

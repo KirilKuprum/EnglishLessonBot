@@ -26,6 +26,18 @@ class DataBase:
                 created_at TEXT
             )
         """)
+
+        cur.execute("""
+            CREATE TABLE IF NOT EXISTS history (
+                id SERIAL PRIMARY KEY,
+                user_id TEXT,
+                passed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                correct_count INTEGER,
+                wrong_count INTEGER,
+                total_words INTEGER
+            )
+        """)
+        
         conn.commit()
         cur.close()
         conn.close()
@@ -94,3 +106,23 @@ class DataBase:
         conn.commit()
         cur.close() 
         conn.close()
+        
+   def add_to_history(self, user_id, correct, wrong, total):
+        conn = psycopg2.connect(self.conn_params)
+        cur = conn.cursor()
+        cur.execute(
+            "INSERT INTO history (user_id, correct_count, wrong_count, total_words) VALUES (%s, %s, %s, %s)",
+            (str(user_id), correct, wrong, total)
+        )
+        conn.commit()
+        cur.close()
+        conn.close()
+
+    def get_history(self, user_id):
+        conn = psycopg2.connect(self.conn_params)
+        cur = conn.cursor()
+        cur.execute("SELECT passed_at, correct_count, wrong_count, total_words FROM history WHERE user_id = %s ORDER BY passed_at DESC", (str(user_id),))
+        rows = cur.fetchall()
+        cur.close()
+        conn.close()
+        return rows

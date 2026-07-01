@@ -95,7 +95,7 @@ async def cmd_encard(message: Message):
         }
         test_db.put_item(db_item)
 
-        words_text = "5:\n\n"
+        words_text = "-----5-----\n\n"
         for i, card in enumerate(cards, 1):
             q = card.get('question') or card.get('word') or "Hello"
             a = card.get('answer') or card.get('translation') or "Привіт"

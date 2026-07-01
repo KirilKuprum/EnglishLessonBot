@@ -192,7 +192,7 @@ async def process_answer(message: Message):
 
 @dp.message(Command("stats"))
 async def cmd_stats(message: Message):
-    history_rows = test_db.get_history(message.chat.id)
+    history_rows = test_db.get_history(str(message.chat.id))
     
     if not history_rows:
         await message.answer("У вас ще немає збереженої історії. Пройдіть хоча б один тест за допомогою /encard.")
